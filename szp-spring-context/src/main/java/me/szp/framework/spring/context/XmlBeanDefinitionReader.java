@@ -46,7 +46,6 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
     }
 
     private void parseXml(Resource resource) {
-        // TODO 解析xml文档，获取bean定义 ，创建bean定义对象，注册到BeanDefinitionRegistry中。
         List<Element> elementList = this.getElements(resource);
 
         GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
@@ -72,10 +71,16 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
                         for (Element property : propertyList) {
 
+//                            logger.debug("xml定义:{},解析得到:{}", XMLRules.SET_INJECT.getProperty(), property.getName());
+
+//                            logger.debug("是否相等:[{}]",XMLRules.SET_INJECT.getProperty().equals(property.getName()));
                             //确保是property标签
                             if (XMLRules.SET_INJECT.getProperty().equals(property.getName())) {
                                 String name = property.attributeValue(XMLRules.SET_INJECT.getName());
                                 String value = property.attributeValue(XMLRules.SET_INJECT.getValue());
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("属性：[name={},value={}]", name, value);
+                                }
                                 if (StringUtils.isEmpty(name) || StringUtils.isEmpty(value)) {
                                     throw new RuntimeException("property标签属性不能为空");
                                 }

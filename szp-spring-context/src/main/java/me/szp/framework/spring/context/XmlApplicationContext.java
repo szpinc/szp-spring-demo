@@ -8,6 +8,8 @@ import me.szp.framework.spring.beans.factory.support.BeanDefinitionReader;
 import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
 import me.szp.framework.spring.context.support.AbstractApplicationContext;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,6 +22,8 @@ import java.util.List;
  * @author GhostDog
  */
 public class XmlApplicationContext extends AbstractApplicationContext {
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      * 加载xml配置文件的产物Resource
@@ -34,6 +38,10 @@ public class XmlApplicationContext extends AbstractApplicationContext {
         BeanDefinitionReader reader = new XmlBeanDefinitionReader((BeanDefinitionRegistry) this.beanFactory);
         Resource[] resourceArray = new Resource[resources.size()];
         reader.loadBeanDefinitions(resources.toArray(resourceArray));
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("BeanDefinition加载完成");
+        }
     }
 
     @Override

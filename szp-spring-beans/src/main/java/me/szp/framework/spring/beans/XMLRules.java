@@ -20,7 +20,7 @@ public enum XMLRules {
     /**
      * set注入的规则
      */
-    SET_INJECT(" property", "name", "value"),
+    SET_INJECT("property", "name", "value"),
     /**
      * 构造器注入的规则
      */
