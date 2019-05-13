@@ -59,7 +59,7 @@ fabric.properties
 
 # IntelliJ project files
 .idea
-*.iml
+**/*.iml
 out
 gen### Xcode template
 # Xcode
