@@ -1,7 +1,7 @@
 import advisor.Advisor;
-import me.szp.framework.spring.beans.BeanDefinition;
-import me.szp.framework.spring.beans.BeanFactory;
-import me.szp.framework.spring.beans.DefaultBeanFactory;
+import me.szp.framework.spring.beans.factory.config.BeanDefinition;
+import me.szp.framework.spring.beans.factory.BeanFactory;
+import me.szp.framework.spring.beans.factory.DefaultBeanFactory;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;

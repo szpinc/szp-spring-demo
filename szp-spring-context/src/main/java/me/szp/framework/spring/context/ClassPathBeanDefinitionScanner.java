@@ -1,6 +1,9 @@
 package me.szp.framework.spring.context;
 
-import me.szp.framework.spring.beans.BeanDefinitionRegistry;
+import me.szp.framework.core.io.FileSystemResource;
+import me.szp.framework.core.io.Resource;
+import me.szp.framework.spring.beans.factory.support.BeanDefinitionReader;
+import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,19 +18,23 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * @author leeSmall
- * @Description: 扫描指定包下的类(包含子孙包下的类),
+ * 扫描指定包下的类(包含子孙包下的类),
  * 通过反射获取bean定义信息、创建bean定义对象、注册bean定义对象到bean工厂
- * @date 2018年12月7日
+ *
+ * @author GhostDog
  */
 public class ClassPathBeanDefinitionScanner {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    //bean定义注册器
+    /**
+     * bean定义注册器
+     */
     private BeanDefinitionRegistry registry;
 
-    //bean定义读取器
+    /**
+     * bean定义读取器
+     */
     private BeanDefinitionReader reader;
 
     private PathMatcher pathMatcher = new AntPathMatcher();
@@ -37,19 +44,30 @@ public class ClassPathBeanDefinitionScanner {
     public ClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry) {
         super();
         this.registry = registry;
-        this.reader = new AnnotationBeanDefintionReader(this.registry);
+        this.reader = new AnnotationBeanDefinitionReader(this.registry);
     }
 
-    //扫描加载bean定义
+    /**
+     * 扫描加载bean定义
+     *
+     * @param basePackages
+     * @throws Throwable
+     */
     public void scan(String... basePackages) throws Throwable {
         if (basePackages != null && basePackages.length > 0) {
             for (String p : basePackages) {
-                this.reader.loadBeanDefintions(this.doScan(p));
+                this.reader.loadBeanDefinitions(this.doScan(p));
             }
         }
     }
 
-    //扫描指定包下的类得到Resource
+    /**
+     * 扫描指定包下的类得到Resource
+     *
+     * @param basePackage
+     * @return
+     * @throws IOException
+     */
     private Resource[] doScan(String basePackage) throws IOException {
         // 扫描包下的类
         // 构造初步匹配模式串，= 给入的包串 + / + **/*.class，替换里面的.为/

@@ -1,20 +1,15 @@
 package me.szp.framework.spring.beans.exception;
 
 /**
- * @author Sun zhi peng
+ * @author GhostDog
  */
-public class BeanDefinitionRegistryException extends RuntimeException {
+public class BeanDefinitionRegistryException extends Exception {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 6056374114834139330L;
+    public BeanDefinitionRegistryException(String mess) {
+        super(mess);
+    }
 
-	public BeanDefinitionRegistryException(String mess) {
-		super(mess);
-	}
-
-	public BeanDefinitionRegistryException(String mess, Throwable e) {
-		super(mess, e);
-	}
+    public BeanDefinitionRegistryException(String mess, Throwable e) {
+        super(mess, e);
+    }
 }

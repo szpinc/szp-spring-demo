@@ -1,10 +1,7 @@
 package me.szp.framework.spring.beans.factory;
 
-/**
- * IOC容器(bean工厂)接口:负责创建bean实例
- *
- * @author Ghost Dog
- */
+import me.szp.framework.spring.beans.factory.config.BeanPostProcessor;
+
 public interface BeanFactory {
     /**
      * 获取bean
@@ -13,5 +10,12 @@ public interface BeanFactory {
      * @return bean 实例
      * @throws Exception Exception
      */
-    Object getBean(String name) throws Exception;
+    Object getBean(String name) throws Throwable;
+
+    /**
+     * 注册Bean处理器
+     *
+     * @param bpp
+     */
+    void registerBeanPostProcessor(BeanPostProcessor bpp);
 }

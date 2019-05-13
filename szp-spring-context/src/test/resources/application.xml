@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans>
+
+    <!--    <bean class="me.szp.framework.spring.core.jdbc.JDBCUtils" id="dataSource">-->
+    <!--        <property name="user" value="root"></property>-->
+    <!--        <property name="password" value="123456"></property>-->
+    <!--        <property name="driver" value="com.mysql.jdbc.Driver"></property>-->
+    <!--        <property name="url" value="jdbc:mysql://192.168.31.100:3306/test"></property>-->
+    <!--    </bean>-->
+
+    <!--    <component-scan base-package="me.szp.framework.web.sample" >-->
+    <!--    </component-scan>-->
+
+
+    <bean class="test.beans.User" id="user">
+        <property name="id" value="10000"></property>
+        <property name="name" value="szp"></property>
+        <property name="password" value="123456"></property>
+    </bean>
+
+</beans>

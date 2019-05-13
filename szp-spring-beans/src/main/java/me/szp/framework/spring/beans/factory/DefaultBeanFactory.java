@@ -1,52 +1,62 @@
 package me.szp.framework.spring.beans.factory;
 
-import me.szp.framework.spring.beans.factory.config.BeanDefinition;
-import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import me.szp.framework.spring.beans.*;
 import me.szp.framework.spring.beans.exception.BeanDefinitionRegistryException;
+import me.szp.framework.spring.beans.factory.config.BeanDefinition;
+import me.szp.framework.spring.beans.factory.config.BeanPostProcessor;
+import me.szp.framework.spring.beans.factory.config.BeanReference;
+import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
- * bean定义BeanDefinition有了,bean定义注册BeanDefinitionRegistry也有了,
- * 就可以实现一个默认的bean工厂DefaultBeanFactory来创建bean实例了,DefaultBeanFactory除了需要实现BeanFactory外,
- * 还需要实现Bean定义注册接口BeanDefinitionRegistry,因为要把bean定义注册到bean工厂里面
+ * DefaultBeanFactory
  *
- * @author Ghost Dog
+ * @author GhostDog
  */
 public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, Closeable {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    /**
-     * 用Map来存放bean定义信息
-     */
-    private Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
+    private Map<String, BeanDefinition> beanDefintionMap = new ConcurrentHashMap<>(256);
 
-    /**
-     * 用Map来存放创建的bean实例,注意这里只是存放单例bean,多实例每次都要创建新的,不需要存放
-     */
     private Map<String, Object> beanMap = new ConcurrentHashMap<>(256);
 
-    /**
-     * 注册bean定义
-     *
-     * @param beanName       bean名称
-     * @param beanDefinition Bean定义
-     * @throws BeanDefinitionRegistryException
-     */
+    private ThreadLocal<Set<String>> buildingBeans = new ThreadLocal<>();
+
+    private List<BeanPostProcessor> beanPostProcessors = Collections.synchronizedList(new ArrayList<>());
+
+    @Override
+    public void registerBeanPostProcessor(BeanPostProcessor bpp) {
+        this.beanPostProcessors.add(bpp);
+        if (bpp instanceof BeanFactoryAware) {
+            ((BeanFactoryAware) bpp).setBeanFactory(this);
+        }
+    }
+
     @Override
     public void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
             throws BeanDefinitionRegistryException {
-        //判断给入的beanName和beanDefinition不能为空
         Objects.requireNonNull(beanName, "注册bean需要给入beanName");
         Objects.requireNonNull(beanDefinition, "注册bean需要给入beanDefinition");
 
@@ -55,75 +65,88 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
             throw new BeanDefinitionRegistryException("名字为[" + beanName + "] 的bean定义不合法：" + beanDefinition);
         }
 
-        //如果已存在bean定义就抛异常
         if (this.containsBeanDefinition(beanName)) {
             throw new BeanDefinitionRegistryException(
                     "名字为[" + beanName + "] 的bean定义已存在:" + this.getBeanDefinition(beanName));
         }
-
-        //把bean定义放到Map里面
-        this.beanDefinitionMap.put(beanName, beanDefinition);
+        this.beanDefintionMap.put(beanName, beanDefinition);
+        if (logger.isDebugEnabled()) {
+            logger.debug("BeanDefinition已注册:[BeanName:{},BeanDefinition:{}]", beanName, beanDefinition);
+        }
     }
 
     @Override
     public BeanDefinition getBeanDefinition(String beanName) {
-        return this.beanDefinitionMap.get(beanName);
+        return this.beanDefintionMap.get(beanName);
     }
 
     @Override
     public boolean containsBeanDefinition(String beanName) {
 
-        return this.beanDefinitionMap.containsKey(beanName);
+        return this.beanDefintionMap.containsKey(beanName);
     }
 
     @Override
-    public Object getBean(String name) throws Exception {
+    public Object getBean(String name) throws Throwable {
         return this.doGetBean(name);
     }
 
-    /**
-     * 根据bean的名字获取bean实例,里面主要做的工作是创建bean实例和对bean实例进行初始化
-     *
-     * @param beanName bean名称
-     * @return bean实例
-     * @throws Exception Exception
-     */
-    protected Object doGetBean(String beanName) throws Exception {
+    protected Object doGetBean(String beanName) throws Throwable {
         Objects.requireNonNull(beanName, "beanName不能为空");
-        //先从beanMap里面获取bean实例
+
         Object instance = beanMap.get(beanName);
-        //如果beanMap里面已存在bean实例就直接返回,不需要走后面的流程了
+
         if (instance != null) {
             return instance;
         }
-        //从beanDefinitionMap里面获取bean定义信息
+
         BeanDefinition bd = this.getBeanDefinition(beanName);
-        //bean定义信息不能为空
-        Objects.requireNonNull(bd, "beanDefinition不能为空");
-        //获取bean的类型
+        Objects.requireNonNull(bd, "不存在name为：" + beanName + "beean 定义！");
+
+        // 记录正在创建的Bean
+        Set<String> ingBeans = this.buildingBeans.get();
+        if (ingBeans == null) {
+            ingBeans = new HashSet<>();
+            this.buildingBeans.set(ingBeans);
+        }
+
+        // 检测循环依赖
+        if (ingBeans.contains(beanName)) {
+            throw new Exception(beanName + " 循环依赖！" + ingBeans);
+        }
+
+        // 记录正在创建的Bean
+        ingBeans.add(beanName);
+
         Class<?> type = bd.getBeanClass();
         if (type != null) {
-            //如果bean的类型不为空,并且工厂方法名为空,说明是使用构造方法的方式来创建bean实例
             if (StringUtils.isBlank(bd.getFactoryMethodName())) {
                 // 构造方法来构造对象
                 instance = this.createInstanceByConstructor(bd);
-            }
-            //如果bean的类型不为空,并且工厂方法名不为空,说明是使用静态工厂方法的方式来创建bean实例
-            else {
+            } else {
                 // 静态工厂方法
                 instance = this.createInstanceByStaticFactoryMethod(bd);
             }
-        }
-        //如果bean的类型为空,说明是使用工厂bean的方式来创建bean实例
-        else {
+        } else {
             // 工厂bean方式来构造对象
             instance = this.createInstanceByFactoryBean(bd);
         }
 
+        // 创建好实例后，移除创建中记录
+        ingBeans.remove(beanName);
+
+        // 给入属性依赖
+        this.setPropertyDIValues(bd, instance);
+
+        // 应用bean初始化前的处理
+        instance = this.applyPostProcessBeforeInitialization(instance, beanName);
+
         // 执行初始化方法
         this.doInit(bd, instance);
 
-        //存放单例的bean到beanMap
+        // 应用bean初始化后的处理
+        instance = this.applyPostProcessAfterInitialization(instance, beanName);
+
         if (bd.isSingleton()) {
             beanMap.put(beanName, instance);
         }
@@ -131,90 +154,292 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
         return instance;
     }
 
+    // 应用bean初始化前的处理
+    private Object applyPostProcessBeforeInitialization(Object bean, String beanName) throws Throwable {
+        for (BeanPostProcessor bpp : this.beanPostProcessors) {
+            bean = bpp.postProcessBeforeInitialization(bean, beanName);
+        }
+        return bean;
+    }
+
+    // 应用bean初始化后的处理
+    private Object applyPostProcessAfterInitialization(Object bean, String beanName) throws Throwable {
+        for (BeanPostProcessor bpp : this.beanPostProcessors) {
+            bean = bpp.postProcessAfterInitialization(bean, beanName);
+        }
+        return bean;
+    }
+
     /**
-     * 构造方法来构造对象--反射
+     * 为实例注入属性值
      *
-     * @param beanDefinition Bean BeanDefinition对象
-     * @return 构造的对象
-     * @throws InstantiationException InstantiationException
-     * @throws IllegalAccessException IllegalAccessException
+     * @param bd       BeanDefinition
+     * @param instance 实例
+     * @throws Throwable Throwable
      */
-    private Object createInstanceByConstructor(BeanDefinition beanDefinition)
-            throws Exception {
+    private void setPropertyDIValues(BeanDefinition bd, Object instance) throws Throwable {
+        if (CollectionUtils.isEmpty(bd.getPropertyValues())) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("类[{}]的属性值为空，无需注入", bd.getBeanClass());
+            }
+            return;
+        }
+        for (PropertyValue propertyValue : bd.getPropertyValues()) {
+            if (StringUtils.isBlank(propertyValue.getName())) {
+                continue;
+            }
+            //通过反射注入属性值
+            Class<?> clazz = instance.getClass();
+            Field p = clazz.getDeclaredField(propertyValue.getName());
+            p.setAccessible(true);
+            //获取属性值
+            Object fieldValue = propertyValue.getValue();
+
+            Object v = null;
+            if (fieldValue == null) {
+            } else if (fieldValue instanceof BeanReference) {
+                v = this.doGetBean(((BeanReference) fieldValue).getBeanName());
+            } else if (fieldValue instanceof Object[]) {
+                // TODO 处理集合中的bean引用
+            } else if (fieldValue instanceof Collection) {
+                // TODO 处理集合中的bean引用
+            } else if (fieldValue instanceof Properties) {
+                // TODO 处理properties中的bean引用
+            } else if (fieldValue instanceof Map) {
+                // TODO 处理Map中的bean引用
+            } else {
+                v = fieldValue;
+            }
+
+            p.set(instance, v);
+
+        }
+    }
+
+    // 构造方法来构造对象
+    private Object createInstanceByConstructor(BeanDefinition bd) throws Throwable {
         try {
-            //拿到bean的类型,然后调用newInstance通过反射来创建bean实例
-            return beanDefinition.getBeanClass().getDeclaredConstructor().newInstance();
+            Object[] args = this.getConstructorArgumentValues(bd);
+            if (args == null) {
+                return bd.getBeanClass().newInstance();
+            } else {
+                bd.setConstructorArgumentRealValues(args);
+                // 决定构造方法
+                Constructor<?> constructor = this.determineConstructor(bd, args);
+                // 缓存构造函数由determineConstructor 中移到了这里，无论原型否都缓存，因为后面AOP需要用
+                bd.setConstructor(constructor);
+                return constructor.newInstance(args);
+            }
+        } catch (SecurityException e1) {
+            logger.error("创建bean的实例异常,beanDefinition：" + bd, e1);
+            throw e1;
+        }
+    }
+
+    private Object[] getConstructorArgumentValues(BeanDefinition bd) throws Throwable {
+
+        return this.getRealValues(bd.getConstructorArgumentValues());
+
+    }
+
+    private Object[] getRealValues(List<?> defs) throws Throwable {
+        if (CollectionUtils.isEmpty(defs)) {
+            return null;
+        }
+
+        Object[] values = new Object[defs.size()];
+        int i = 0;
+        Object v = null;
+        for (Object rv : defs) {
+            if (rv == null) {
+                v = null;
+            } else if (rv instanceof BeanReference) {
+                v = this.doGetBean(((BeanReference) rv).getBeanName());
+            } else if (rv instanceof Object[]) {
+                // TODO 处理集合中的bean引用
+            } else if (rv instanceof Collection) {
+                // TODO 处理集合中的bean引用
+            } else if (rv instanceof Properties) {
+                // TODO 处理properties中的bean引用
+            } else if (rv instanceof Map) {
+                // TODO 处理Map中的bean引用
+            } else {
+                v = rv;
+            }
+
+            values[i++] = v;
+        }
+
+        return values;
+    }
+
+    private Constructor<?> determineConstructor(BeanDefinition bd, Object[] args) throws Exception {
+
+        Constructor<?> ct = null;
+
+        if (args == null) {
+            return bd.getBeanClass().getConstructor(null);
+        }
+
+        // 对于原型bean,从第二次开始获取bean实例时，可直接获得第一次缓存的构造方法。
+        ct = bd.getConstructor();
+        if (ct != null) {
+            return ct;
+        }
+
+        // 根据参数类型获取精确匹配的构造方法
+        Class<?>[] paramTypes = new Class[args.length];
+        int j = 0;
+        for (Object p : args) {
+            paramTypes[j++] = p.getClass();
+        }
+        try {
+            ct = bd.getBeanClass().getConstructor(paramTypes);
         } catch (Exception e) {
-            logger.error("创建bean的实例异常,beanDefinition：" + beanDefinition, e);
-            throw e;
+            // 这个异常不需要处理
+        }
+
+        if (ct == null) {
+
+            // 没有精确参数类型匹配的，则遍历匹配所有的构造方法
+            // 判断逻辑：先判断参数数量，再依次比对形参类型与实参类型
+            outer:
+            for (Constructor<?> ct0 : bd.getBeanClass().getConstructors()) {
+                Class<?>[] paramterTypes = ct0.getParameterTypes();
+                if (paramterTypes.length == args.length) {
+                    for (int i = 0; i < paramterTypes.length; i++) {
+                        if (!paramterTypes[i].isAssignableFrom(args[i].getClass())) {
+                            continue outer;
+                        }
+                    }
+
+                    ct = ct0;
+                    break outer;
+                }
+            }
+        }
+
+        if (ct != null) {
+            return ct;
+        } else {
+            throw new Exception("不存在对应的构造方法！" + bd);
         }
     }
 
-    /**
-     * 静态工厂方法--反射
-     *
-     * @param beanDefinition Bean BeanDefinition对象
-     * @return 构造的对象
-     * @throws Exception Exception
-     */
-    private Object createInstanceByStaticFactoryMethod(BeanDefinition beanDefinition) throws Exception {
-        //拿到bean的类型
-        Class<?> type = beanDefinition.getBeanClass();
-        //通过静态工厂方法方法的名字getFactoryMethodName反射出bean的方法创建bean实例
-        Method m = type.getMethod(beanDefinition.getFactoryMethodName(), null);
-        if (logger.isDebugEnabled()) {
-            logger.debug("获取的静态工厂方法名:[{}]", m.getName());
+    private Method determineFactoryMethod(BeanDefinition bd, Object[] args, Class<?> type) throws Exception {
+        if (type == null) {
+            type = bd.getBeanClass();
         }
-        return m.invoke(type, null);
+
+        String methodName = bd.getFactoryMethodName();
+
+        if (args == null) {
+            return type.getMethod(methodName, null);
+        }
+
+        Method m = null;
+        // 对于原型bean,从第二次开始获取bean实例时，可直接获得第一次缓存的构造方法。
+        m = bd.getFactoryMethod();
+        if (m != null) {
+            return m;
+        }
+
+        // 根据参数类型获取精确匹配的方法
+        Class[] paramTypes = new Class[args.length];
+        int j = 0;
+        for (Object p : args) {
+            paramTypes[j++] = p.getClass();
+        }
+        try {
+            m = type.getMethod(methodName, paramTypes);
+        } catch (Exception e) {
+            // 这个异常不需要处理
+        }
+
+        if (m == null) {
+
+            // 没有精确参数类型匹配的，则遍历匹配所有的方法
+            // 判断逻辑：先判断参数数量，再依次比对形参类型与实参类型
+            outer:
+            for (Method m0 : type.getMethods()) {
+                if (!m0.getName().equals(methodName)) {
+                    continue;
+                }
+                Class<?>[] paramterTypes = m.getParameterTypes();
+                if (paramterTypes.length == args.length) {
+                    for (int i = 0; i < paramterTypes.length; i++) {
+                        if (!paramterTypes[i].isAssignableFrom(args[i].getClass())) {
+                            continue outer;
+                        }
+                    }
+
+                    m = m0;
+                    break outer;
+                }
+            }
+        }
+
+        if (m != null) {
+            // 对于原型bean,可以缓存找到的方法，方便下次构造实例对象。在BeanDefinfition中获取设置所用方法的方法。
+            // 同时在上面增加从beanDefinition中获取的逻辑。
+            if (bd.isPrototype()) {
+                bd.setFactoryMethod(m);
+            }
+            return m;
+        } else {
+            throw new Exception("不存在对应的构造方法！" + bd);
+        }
     }
 
-    /**
-     * 工厂bean方式来构造对象--反射
-     *
-     * @param beanDefinition Bean BeanDefinition对象
-     * @return 构造的对象
-     * @throws Exception Exception
-     */
-    private Object createInstanceByFactoryBean(BeanDefinition beanDefinition) throws Exception {
+    // 静态工厂方法
+    private Object createInstanceByStaticFactoryMethod(BeanDefinition bd) throws Throwable {
 
-        //通过bean定义信息中工厂bean的名字获取工厂bean的实例
-        Object factoryBean = this.doGetBean(beanDefinition.getFactoryBeanName());
-        //通过bean定义信息中工厂方法的名字反射出工厂bean的方法m创建bean实例
-        Method m = factoryBean.getClass().getMethod(beanDefinition.getFactoryMethodName(), null);
-        return m.invoke(factoryBean, null);
+        Class<?> type = bd.getBeanClass();
+        Object[] realArgs = this.getRealValues(bd.getConstructorArgumentValues());
+        Method m = this.determineFactoryMethod(bd, realArgs, null);
+        return m.invoke(type, realArgs);
+    }
+
+    // 工厂bean方式来构造对象
+    private Object createInstanceByFactoryBean(BeanDefinition bd) throws Throwable {
+
+        Object factoryBean = this.doGetBean(bd.getFactoryBeanName());
+        Object[] realArgs = this.getRealValues(bd.getConstructorArgumentValues());
+        Method m = this.determineFactoryMethod(bd, realArgs, factoryBean.getClass());
+
+        return m.invoke(factoryBean, realArgs);
     }
 
     /**
      * 执行初始化方法
      *
-     * @param beanDefinition Bean BeanDefinition对象
-     * @param instance       实例
-     * @throws Exception Exception
+     * @param bd
+     * @param instance
+     * @throws Exception
      */
-    private void doInit(BeanDefinition beanDefinition, Object instance) throws Exception {
-        // 获取bean定义中的初始化方法,如果存在初始化方法就通过反射去执行初始化方法
-        if (StringUtils.isNotBlank(beanDefinition.getInitMethodName())) {
-            Method m = instance.getClass().getMethod(beanDefinition.getInitMethodName(), null);
+    private void doInit(BeanDefinition bd, Object instance) throws Exception {
+        // 执行初始化方法
+        if (StringUtils.isNotBlank(bd.getInitMethodName())) {
+            Method m = instance.getClass().getMethod(bd.getInitMethodName(), null);
             m.invoke(instance, null);
         }
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         // 执行单例实例的销毁方法
-        for (Entry<String, BeanDefinition> e : this.beanDefinitionMap.entrySet()) {
+        for (Entry<String, BeanDefinition> e : this.beanDefintionMap.entrySet()) {
             String beanName = e.getKey();
-            BeanDefinition beanDefinition = e.getValue();
+            BeanDefinition bd = e.getValue();
 
-            //获取bean定义中的销毁方法,如果存在销毁方法就通过反射去执行销毁方法
-            if (beanDefinition.isSingleton() && StringUtils.isNotBlank(beanDefinition.getDestroyMethodName())) {
+            if (bd.isSingleton() && StringUtils.isNotBlank(bd.getDestroyMethodName())) {
                 Object instance = this.beanMap.get(beanName);
                 try {
-                    Method m = instance.getClass().getMethod(beanDefinition.getDestroyMethodName(), null);
+                    Method m = instance.getClass().getMethod(bd.getDestroyMethodName(), null);
                     m.invoke(instance, null);
                 } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
                         | InvocationTargetException e1) {
-                    logger.error("执行bean[" + beanName + "] " + beanDefinition + " 的 销毁方法异常！", e1);
+                    logger.error("执行bean[" + beanName + "] " + bd + " 的 销毁方法异常！", e1);
                 }
             }
         }

@@ -1,5 +1,5 @@
 import advisor.Advisor;
-import me.szp.framework.spring.beans.BeanFactory;
+import me.szp.framework.spring.beans.factory.BeanFactory;
 
 import java.util.List;
 

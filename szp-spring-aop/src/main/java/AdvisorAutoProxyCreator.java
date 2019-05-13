@@ -1,9 +1,9 @@
 import advisor.Advisor;
 import advisor.AdvisorRegistry;
 import advisor.PointcutAdvisor;
-import me.szp.framework.spring.beans.BeanFactory;
-import me.szp.framework.spring.beans.BeanFactoryAware;
-import me.szp.framework.spring.beans.BeanPostProcessor;
+import me.szp.framework.spring.beans.factory.BeanFactory;
+import me.szp.framework.spring.beans.factory.BeanFactoryAware;
+import me.szp.framework.spring.beans.factory.config.BeanPostProcessor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;

@@ -14,6 +14,7 @@
         <module>szp-spring-beans</module>
         <module>szp-spring-aop</module>
         <module>szp-spring-sample</module>
+        <module>szp-spring-webmvc</module>
     </modules>
 
 
@@ -25,6 +26,8 @@
         <junit.version>4.12</junit.version>
         <aspectj.version>1.9.2</aspectj.version>
         <cglib.version>3.2.6</cglib.version>
+        <servlet.version>3.1.0</servlet.version>
+        <dom4j.version>1.6.1</dom4j.version>
     </properties>
 
     <dependencyManagement>
@@ -55,7 +58,7 @@
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
                 <version>${logback.version}</version>
-                <scope>test</scope>
+<!--                <scope>test</scope>-->
             </dependency>
             <!-- log END -->
 
@@ -87,6 +90,22 @@
                 <version>${aspectj.version}</version>
             </dependency>
             <!-- cglib START -->
+
+            <!-- servlet START -->
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>${servlet.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <!-- servlet END -->
+            <!-- dom4j START -->
+            <dependency>
+                <groupId>dom4j</groupId>
+                <artifactId>dom4j</artifactId>
+                <version>${dom4j.version}</version>
+            </dependency>
+            <!-- dom4j START -->
         </dependencies>
     </dependencyManagement>
 

@@ -1,23 +1,23 @@
 package me.szp.framework.spring.context;
 
-import me.szp.framework.spring.beans.BeanDefinitionRegistry;
+import me.szp.framework.core.io.Resource;
+import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
+import me.szp.framework.spring.context.support.AbstractApplicationContext;
 
 import java.io.IOException;
 
 /**
- * @author leeSmall
- * @Description: 扫描指定包下的类(包含子孙包下的类), 得到Resource
+ * 扫描指定包下的类(包含子孙包下的类), 得到Resource
  * 通过反射获取bean定义信息、创建bean定义对象、注册bean定义对象到bean工厂
- * @date 2018年12月7日
+ *
+ * @author GhostDog
  */
 public class AnnotationApplicationContext extends AbstractApplicationContext {
-
-    private ClassPathBeanDefinitionScanner scanner;
 
     public AnnotationApplicationContext(String... basePackages) throws Throwable {
         //扫描指定包下的类(包含子孙包下的类),
         //通过反射获取bean定义信息、创建bean定义对象、注册bean定义对象到bean工厂
-        scanner = new ClassPathBeanDefinitionScanner((BeanDefinitionRegistry) this.beanFactory);
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner((BeanDefinitionRegistry) this.beanFactory);
         scanner.scan(basePackages);
     }
 

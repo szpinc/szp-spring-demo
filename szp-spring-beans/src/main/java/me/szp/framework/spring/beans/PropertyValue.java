@@ -2,37 +2,39 @@ package me.szp.framework.spring.beans;
 
 /**
  * 属性值依赖定义
- * 
- * @author 动脑学院.Mike老师 QQ:3266399810
  *
- *         VIP课程咨询加可可老师 QQ：2729772006
+ * @author GhostDog
  */
 public class PropertyValue {
 
-	private String name;
+    private String name;
 
-	private Object value;
+    private Object value;
 
-	public PropertyValue(String name, Object value) {
-		super();
-		this.name = name;
-		this.value = value;
-	}
+    public PropertyValue() {
+        super();
+    }
 
-	public String getName() {
-		return name;
-	}
+    public PropertyValue(String name, Object value) {
+        super();
+        this.name = name;
+        this.value = value;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public Object getValue() {
-		return value;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public void setValue(Object value) {
-		this.value = value;
-	}
+    public Object getValue() {
+        return value;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
 
 }

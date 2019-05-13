@@ -1,22 +1,21 @@
 package me.szp.framework.spring.beans.factory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import me.szp.framework.spring.beans.factory.config.BeanDefinition;
 import me.szp.framework.spring.beans.exception.BeanDefinitionRegistryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * 提前实例化单例bean
  *
- * @author Ghost Dog
+ *
+ * @author GhostDog
  */
-
 public class PreBuildBeanFactory extends DefaultBeanFactory {
 
-    private Logger logger = LoggerFactory.getLogger(PreBuildBeanFactory.class);
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final List<String> beanNames = new ArrayList<>();
 
@@ -29,20 +28,14 @@ public class PreBuildBeanFactory extends DefaultBeanFactory {
         }
     }
 
-
-    /**
-     * 预实例化Bean
-     *
-     * @throws Exception Exception
-     */
-    public void preInstantiateSingletons() throws Exception {
+    public void preInstantiateSingletons() throws Throwable {
         synchronized (beanNames) {
             for (String name : beanNames) {
-                BeanDefinition beanDefinition = this.getBeanDefinition(name);
-                if (beanDefinition.isSingleton()) {
+                BeanDefinition bd = this.getBeanDefinition(name);
+                if (bd.isSingleton()) {
                     this.doGetBean(name);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("预实例化Bean：[{}]", name);
+                        logger.debug("preInstantiate: name=" + name + " " + bd);
                     }
                 }
             }

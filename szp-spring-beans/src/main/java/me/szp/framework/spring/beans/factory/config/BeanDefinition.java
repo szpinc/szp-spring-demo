@@ -1,78 +1,76 @@
 package me.szp.framework.spring.beans.factory.config;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.List;
+
+import me.szp.framework.spring.beans.PropertyValue;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * bean定义接口:要IOC容器(bean工厂)创建bean实例，就得告诉IOC容器(bean工厂)需要创建什么样的bean-BeanDefinition
+ * bean定义接口
  *
  * @author Ghost Dog
  */
 public interface BeanDefinition {
-    /**
-     * 单例模式
-     */
+
     String SCOPE_SINGLETON = "singleton";
 
-    /**
-     * 原型模式
-     */
     String SCOPE_PROTOTYPE = "prototype";
 
     /**
-     * 类:new 构造方法的方式创建bean时，需要告诉bean工厂怎么获取类的名称
-     *
-     * @return 获取的类对象
+     * 类
      */
     Class<?> getBeanClass();
 
     /**
-     * 获取Scope
-     *
-     * @return Scope
+     * Scope
      */
     String getScope();
 
     /**
      * 是否单例
-     *
-     * @return 结果
      */
     boolean isSingleton();
 
     /**
      * 是否原型
-     *
-     * @return 结果
      */
     boolean isPrototype();
 
     /**
-     * 工厂bean名：成员工厂方法的方式创建bean时，需要告诉bean工厂怎么获取工厂bean名
-     *
-     * @return 工厂名
+     * 工厂bean名
      */
     String getFactoryBeanName();
 
     /**
-     * 工厂方法名:静态工厂方法的方式创建bean时，需要告诉bean工厂怎么获取工厂方法名
-     *
-     * @return 工厂方法名
+     * 工厂方法名
      */
     String getFactoryMethodName();
 
     /**
-     * 获取初始化方法
-     *
-     * @return 初始化方法
+     * 初始化方法
      */
     String getInitMethodName();
 
     /**
-     * 获取销毁方法
-     *
-     * @return 销毁方法
+     * 销毁方法
      */
     String getDestroyMethodName();
+
+    /* 下面的四个方法是供beanFactory中使用的 */
+
+    public Constructor<?> getConstructor();
+
+    public void setConstructor(Constructor<?> constructor);
+
+    public Method getFactoryMethod();
+
+    public void setFactoryMethod(Method factoryMethod);
+
+    public Object[] getConstructorArgumentRealValues();
+
+    public void setConstructorArgumentRealValues(Object[] values);
 
     /**
      * 校验bean定义的合法性
@@ -86,8 +84,23 @@ public interface BeanDefinition {
                 return false;
             }
         }
-
         // 定义了类，又定义工厂bean，不合法
         return this.getBeanClass() == null || !StringUtils.isNotBlank(getFactoryBeanName());
+
     }
+
+    /**
+     * 获得构造参数定义
+     *
+     * @return 参数定义集合
+     */
+    List<?> getConstructorArgumentValues();
+
+    /**
+     * 属性依赖
+     *
+     * @return 依赖属性集合
+     */
+    List<PropertyValue> getPropertyValues();
+
 }

@@ -1,6 +1,6 @@
 import advisor.Advisor;
 import advisor.PointcutAdvisor;
-import me.szp.framework.spring.beans.BeanFactory;
+import me.szp.framework.spring.beans.factory.BeanFactory;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;

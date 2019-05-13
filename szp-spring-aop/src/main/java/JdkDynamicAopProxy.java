@@ -1,5 +1,5 @@
 import advisor.Advisor;
-import me.szp.framework.spring.beans.BeanFactory;
+import me.szp.framework.spring.beans.factory.BeanFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
