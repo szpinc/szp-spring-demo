@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: me.szp.framework:szp-spring-context:unknown">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/me/szp/framework/szp-spring-context/unknown/szp-spring-context-unknown.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/me/szp/framework/szp-spring-context/unknown/szp-spring-context-unknown-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/me/szp/framework/szp-spring-context/unknown/szp-spring-context-unknown-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
