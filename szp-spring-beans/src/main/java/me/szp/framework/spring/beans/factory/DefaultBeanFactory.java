@@ -6,25 +6,20 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import me.szp.framework.spring.beans.*;
 import me.szp.framework.spring.beans.exception.BeanDefinitionRegistryException;
+import me.szp.framework.spring.beans.factory.annotation.Autowired;
 import me.szp.framework.spring.beans.factory.config.BeanDefinition;
 import me.szp.framework.spring.beans.factory.config.BeanPostProcessor;
 import me.szp.framework.spring.beans.factory.config.BeanReference;
 import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,15 +88,16 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
 
     protected Object doGetBean(String beanName) throws Throwable {
         Objects.requireNonNull(beanName, "beanName不能为空");
-
+        //TODO 线程安全问题
         Object instance = beanMap.get(beanName);
 
         if (instance != null) {
             return instance;
         }
 
+
         BeanDefinition bd = this.getBeanDefinition(beanName);
-        Objects.requireNonNull(bd, "不存在name为：" + beanName + "beean 定义！");
+        Objects.requireNonNull(bd, "不存在name为：" + beanName + "bean 定义！");
 
         // 记录正在创建的Bean
         Set<String> ingBeans = this.buildingBeans.get();
@@ -119,6 +115,7 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
         ingBeans.add(beanName);
 
         Class<?> type = bd.getBeanClass();
+
         if (type != null) {
             if (StringUtils.isBlank(bd.getFactoryMethodName())) {
                 // 构造方法来构造对象
@@ -178,41 +175,34 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
      * @throws Throwable Throwable
      */
     private void setPropertyDIValues(BeanDefinition bd, Object instance) throws Throwable {
+
+
         if (CollectionUtils.isEmpty(bd.getPropertyValues())) {
             if (logger.isDebugEnabled()) {
                 logger.debug("类[{}]的属性值为空，无需注入", bd.getBeanClass());
             }
             return;
         }
+        Map<String, Object> instanceFields = new HashMap<>();
+
         for (PropertyValue propertyValue : bd.getPropertyValues()) {
             if (StringUtils.isBlank(propertyValue.getName())) {
                 continue;
             }
-            //通过反射注入属性值
-            Class<?> clazz = instance.getClass();
-            Field p = clazz.getDeclaredField(propertyValue.getName());
-            p.setAccessible(true);
-            //获取属性值
-            Object fieldValue = propertyValue.getValue();
+            instanceFields.put(propertyValue.getName(), propertyValue.getValue());
+        }
+        BeanUtils.populate(instance, instanceFields);
+    }
 
-            Object v = null;
-            if (fieldValue == null) {
-            } else if (fieldValue instanceof BeanReference) {
-                v = this.doGetBean(((BeanReference) fieldValue).getBeanName());
-            } else if (fieldValue instanceof Object[]) {
-                // TODO 处理集合中的bean引用
-            } else if (fieldValue instanceof Collection) {
-                // TODO 处理集合中的bean引用
-            } else if (fieldValue instanceof Properties) {
-                // TODO 处理properties中的bean引用
-            } else if (fieldValue instanceof Map) {
-                // TODO 处理Map中的bean引用
-            } else {
-                v = fieldValue;
+
+    private void handleAutowired(Object instance) {
+        Field[] fields = instance.getClass().getFields();
+        for (Field field : fields) {
+            Autowired autowired = field.getAnnotation(Autowired.class);
+            String beanName = null;
+            if (autowired!=null&&autowired.required()){
+                field.setAccessible(true);
             }
-
-            p.set(instance, v);
-
         }
     }
 

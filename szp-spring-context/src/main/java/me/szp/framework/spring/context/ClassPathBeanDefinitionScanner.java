@@ -5,9 +5,12 @@ import me.szp.framework.core.io.Resource;
 import me.szp.framework.spring.beans.factory.support.BeanDefinitionReader;
 import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringExclude;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.PathMatcher;
 
 import java.io.File;
@@ -69,23 +72,26 @@ public class ClassPathBeanDefinitionScanner {
      * @throws IOException
      */
     private Resource[] doScan(String basePackage) throws IOException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("开始扫描包:[{}]", basePackage);
+        }
         // 扫描包下的类
         // 构造初步匹配模式串，= 给入的包串 + / + **/*.class，替换里面的.为/
-        String pathPattern = StringUtils.replace(basePackage, ".", "/") + "/" + this.resourcePatter;
-        if (pathPattern.charAt(0) != '/') {
-            pathPattern = "/" + pathPattern;
+        String rootPath = "/" + StringUtils.replace(basePackage, ".", "/") + "/";
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("根目录:[{}]", rootPath);
         }
-        // 找出模式的根包路径
-        String rootPath = this.determineRootDir(pathPattern);
-        // 得到文件名匹配的绝对路径模式
-        String fullPattern = this.getClass().getResource("/").toString() + pathPattern;
-        // 根据根包理解得到根包对应的目录
-        File rootDir = new File(this.getClass().getResource(rootPath).toString());
+
+        File rootDir = new File(this.getClass().getResource(rootPath).getFile());
         // 存放找到的类文件的resource集合
         Set<Resource> scanedClassFileResources = new HashSet<>();
         // 调用doRetrieveMatchingFiles来扫描class文件
-        this.doRetrieveMatchingFiles(fullPattern, rootDir, scanedClassFileResources);
-        return (Resource[]) scanedClassFileResources.toArray();
+        this.doRetrieveMatchingFiles(rootDir, scanedClassFileResources);
+
+        Resource[] resources = new Resource[scanedClassFileResources.size()];
+
+        return scanedClassFileResources.toArray(resources);
     }
 
     private String determineRootDir(String location) {
@@ -105,32 +111,34 @@ public class ClassPathBeanDefinitionScanner {
     /**
      * 递归找指定目录下的所有类，匹配模式的加入到结果中。
      *
-     * @param fullPattern
      * @param dir
      * @param result
      * @throws IOException
      */
-    protected void doRetrieveMatchingFiles(String fullPattern, File dir, Set<Resource> result) throws IOException {
-        if (logger.isTraceEnabled()) {
-            logger.trace("Searching directory [" + dir.getAbsolutePath() + "] for files matching pattern ["
-                    + fullPattern + "]");
-        }
+    protected void doRetrieveMatchingFiles(File dir, Set<Resource> result) throws IOException {
+
         for (File content : listDirectory(dir)) {
             String currPath = StringUtils.replace(content.getAbsolutePath(), File.separator, "/");
-            if (content.isDirectory() && getPathMatcher().matchStart(fullPattern, currPath + "/")) {
+            if (content.isDirectory()) {
                 if (!content.canRead()) {
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Skipping subdirectory [" + dir.getAbsolutePath()
-                                + "] because the application is not allowed to read the directory");
+                        logger.debug("跳过目录扫描[{}]，当前目录不可读" + dir.getAbsolutePath());
                     }
                 } else {
-                    doRetrieveMatchingFiles(fullPattern, content, result);
+                    doRetrieveMatchingFiles(content, result);
                 }
             }
-            if (getPathMatcher().match(fullPattern, currPath)) {
+
+            if (isClassFile(content)) {
+                logger.debug("扫描到的类：[{}]", content.getName());
                 result.add(new FileSystemResource(content));
             }
         }
+    }
+
+
+    private boolean isClassFile(File file) {
+        return file.getName().endsWith(".class");
     }
 
     protected File[] listDirectory(File dir) {

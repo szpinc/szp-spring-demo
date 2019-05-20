@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans>
+
+    <bean class="me.szp.samples.entity.User" id="user">
+        <property name="id" value="10000"></property>
+        <property name="name" value="szp"></property>
+        <property name="password" value="123456"></property>
+    </bean>
+
+</beans>

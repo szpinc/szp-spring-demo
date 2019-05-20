@@ -1,6 +1,8 @@
+import me.szp.framework.spring.context.AnnotationApplicationContext;
 import me.szp.framework.spring.context.ApplicationContext;
 import me.szp.framework.spring.context.XmlApplicationContext;
 import org.junit.Test;
+import test.beans.Student;
 import test.beans.User;
 
 /**
@@ -13,8 +15,19 @@ public class TestApplicationContext {
     @Test
     public void testXmlApplicationContext() throws Throwable {
         ApplicationContext applicationContext = new XmlApplicationContext("classpath:/application.xml");
-        User user = (User) applicationContext.getBean("user");
+//        User user = (User) applicationContext.getBean("user");
 
-        System.out.println(user);
+//        System.out.println(user);
+    }
+
+    @Test
+    public void testAnnotationApplicationContext() throws Throwable {
+
+        ApplicationContext applicationContext = new AnnotationApplicationContext("test");
+
+        Student student = (Student) applicationContext.getBean("student");
+
+        System.out.println(student);
+
     }
 }

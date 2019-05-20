@@ -1,6 +1,7 @@
 package me.szp.framework.core.io;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
@@ -75,34 +76,12 @@ public class ClassPathResource implements Resource {
 
     @Override
     public InputStream getInputStream() throws IOException {
-        if (StringUtils.isNotBlank(path)) {
-            if (this.clazz != null) {
-                return this.clazz.getResourceAsStream(path);
-            }
-
-            if (this.classLoader != null) {
-                return this.classLoader.getResourceAsStream(path.startsWith("/") ? path.substring(1) : path);
-            }
-
-            return this.getClass().getResourceAsStream(path);
-        }
-        return null;
+        return new FileInputStream(getFile());
     }
 
     @Override
     public boolean exists() {
-        if (StringUtils.isNotBlank(path)) {
-            if (this.clazz != null) {
-                return this.clazz.getResource(path) != null;
-            }
-
-            if (this.classLoader != null) {
-                return this.classLoader.getResource(path.startsWith("/") ? path.substring(1) : path) != null;
-            }
-
-            return this.getClass().getResource(path) != null;
-        }
-        return false;
+        return getFile() != null;
     }
 
     @Override
@@ -117,12 +96,19 @@ public class ClassPathResource implements Resource {
 
     @Override
     public File getFile() {
-        if (logger.isDebugEnabled()) {
-            logger.debug("资源文件：[{}]", path);
-            logger.debug("根目录:[{}]", Objects.requireNonNull(this.getClass().getResource("/")));
-        }
+        if (StringUtils.isNotBlank(path)) {
+            if (this.clazz != null) {
+                return new File(this.clazz.getResource(path).getFile());
+            }
 
-        return new File(this.getClass().getResource(path).getFile());
+            //如果classLoader不为空，则对URL进行处理
+            if (this.classLoader != null) {
+                return new File(Objects.requireNonNull(this.classLoader.getResource(path.startsWith("/") ? path.substring(1) : path)).getFile());
+            }
+
+            return new File(this.getClass().getResource(path).getFile());
+        }
+        return null;
     }
 
 }

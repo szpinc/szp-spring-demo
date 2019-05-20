@@ -12,7 +12,7 @@
     <!--    </component-scan>-->
 
 
-    <bean class="test.beans.User" id="user">
+    <bean class="test.beans.User" id="user" init-method="" destory-method="">
         <property name="id" value="10000"></property>
         <property name="name" value="szp"></property>
         <property name="password" value="123456"></property>
