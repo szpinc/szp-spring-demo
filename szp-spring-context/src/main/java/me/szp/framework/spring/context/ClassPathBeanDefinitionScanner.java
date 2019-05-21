@@ -45,7 +45,6 @@ public class ClassPathBeanDefinitionScanner {
     private String resourcePatter = "**/*.class";
 
     public ClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry) {
-        super();
         this.registry = registry;
         this.reader = new AnnotationBeanDefinitionReader(this.registry);
     }

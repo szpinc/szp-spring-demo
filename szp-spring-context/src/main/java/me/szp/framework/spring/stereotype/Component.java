@@ -1,4 +1,4 @@
-package me.szp.framework.spring.context.annotation;
+package me.szp.framework.spring.stereotype;
 
 import me.szp.framework.spring.beans.factory.config.BeanDefinition;
 

@@ -3,12 +3,12 @@ package me.szp.framework.spring.context;
 import com.google.common.base.CaseFormat;
 import me.szp.framework.core.io.Resource;
 import me.szp.framework.spring.beans.PropertyValue;
+import me.szp.framework.spring.beans.factory.annotation.Autowired;
+import me.szp.framework.spring.beans.factory.annotation.Value;
 import me.szp.framework.spring.beans.factory.support.AbstractBeanDefinitionReader;
 import me.szp.framework.spring.beans.factory.support.BeanDefinitionRegistry;
 import me.szp.framework.spring.beans.factory.support.GenericBeanDefinition;
-import me.szp.framework.spring.context.annotation.Autowired;
-import me.szp.framework.spring.context.annotation.Component;
-import me.szp.framework.spring.context.annotation.Value;
+import me.szp.framework.spring.stereotype.Component;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,6 +121,8 @@ public class AnnotationBeanDefinitionReader extends AbstractBeanDefinitionReader
                 propertyValueList.add(new PropertyValue(field.getName(), filedValue));
             }
         }
+
+        bd.setPropertyValues(propertyValueList);
 
     }
 

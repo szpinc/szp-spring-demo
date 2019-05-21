@@ -2,6 +2,7 @@ import me.szp.framework.spring.context.AnnotationApplicationContext;
 import me.szp.framework.spring.context.ApplicationContext;
 import me.szp.framework.spring.context.XmlApplicationContext;
 import org.junit.Test;
+import test.beans.ClassRome;
 import test.beans.Student;
 import test.beans.User;
 
@@ -23,11 +24,8 @@ public class TestApplicationContext {
     @Test
     public void testAnnotationApplicationContext() throws Throwable {
 
-        ApplicationContext applicationContext = new AnnotationApplicationContext("test");
-
-        Student student = (Student) applicationContext.getBean("student");
-
-        System.out.println(student);
-
+        AnnotationApplicationContext applicationContext = new AnnotationApplicationContext("test");
+        ClassRome classRome = (ClassRome) applicationContext.getBean("classRome");
+        System.out.println(classRome.getStudent());
     }
 }

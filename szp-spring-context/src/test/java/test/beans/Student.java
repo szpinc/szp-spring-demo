@@ -1,7 +1,7 @@
 package test.beans;
 
-import me.szp.framework.spring.context.annotation.Component;
-import me.szp.framework.spring.context.annotation.Value;
+import me.szp.framework.spring.beans.factory.annotation.Value;
+import me.szp.framework.spring.stereotype.Component;
 
 /**
  * @author Sun Zhi Peng
@@ -11,7 +11,7 @@ import me.szp.framework.spring.context.annotation.Value;
 @Component
 public class Student {
 
-    @Value("GhostDog")
+    @Value("szpinc")
     private String name;
     @Value("18")
     private int age;

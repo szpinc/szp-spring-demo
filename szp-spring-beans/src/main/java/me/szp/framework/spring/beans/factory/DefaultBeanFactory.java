@@ -132,6 +132,8 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
         // 创建好实例后，移除创建中记录
         ingBeans.remove(beanName);
 
+        this.handleAutowired(instance);
+
         // 给入属性依赖
         this.setPropertyDIValues(bd, instance);
 
@@ -194,19 +196,33 @@ public class DefaultBeanFactory implements BeanFactory, BeanDefinitionRegistry, 
         BeanUtils.populate(instance, instanceFields);
     }
 
-
+    /**
+     * 处理Autowired
+     *
+     * @param instance
+     */
     private void handleAutowired(Object instance) {
-        Field[] fields = instance.getClass().getFields();
-        for (Field field : fields) {
-            Autowired autowired = field.getAnnotation(Autowired.class);
-            String beanName = null;
-            if (autowired!=null&&autowired.required()){
-                field.setAccessible(true);
-            }
+        if (logger.isDebugEnabled()) {
+            logger.debug("开始扫描Annotation注解");
         }
+        Field[] fields = instance.getClass().getDeclaredFields();
+        Arrays.stream(fields).forEach(field -> {
+
+            Autowired autowired = field.getAnnotation(Autowired.class);
+            if (autowired != null && autowired.required()) {
+                logger.debug("扫描到字段[{}]需要注入", field.getName());
+                try {
+                    Object bean = getBean(field.getName());
+                    field.setAccessible(true);
+                    field.set(instance, bean);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
-    // 构造方法来构造对象
+
     private Object createInstanceByConstructor(BeanDefinition bd) throws Throwable {
         try {
             Object[] args = this.getConstructorArgumentValues(bd);
